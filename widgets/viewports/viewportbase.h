@@ -164,6 +164,7 @@ protected:
     QOpenGLShaderProgram meshShader;
     QOpenGLShaderProgram meshTreeColorShader;
     QOpenGLShaderProgram meshIdShader;
+    QOpenGLShaderProgram sphereShader;
     boost::optional<BufferSelection> pickMesh(const QPoint pos);
     void pickMeshIdAtPosition();
 

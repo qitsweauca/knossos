@@ -280,11 +280,18 @@ void ViewportBase::initializeGL() {
         enabled = enabled && meshIdShader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/resources/shaders/mesh/meshidshader.frag");
         state->viewerState->MeshPickingEnabled = enabled && meshIdShader.link();
     }
-    for (auto * shader : {&meshShader, &meshTreeColorShader, &meshIdShader}) {
+    if (!sphereShader.isLinked()) {
+        sphereShader.addShaderFromSourceFile(QOpenGLShader::Vertex, ":/resources/shaders/sphere.vert");
+        sphereShader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/resources/shaders/sphere.frag");
+        sphereShader.link();
+    }
+    for (auto * shader : {&meshShader, &meshTreeColorShader, &meshIdShader, &sphereShader}) {
         if (!shader->log().isEmpty()) {
             qDebug() << shader->log();
         }
     }
+
+
 }
 
 void ViewportBase::resizeGL(int width, int height) {
