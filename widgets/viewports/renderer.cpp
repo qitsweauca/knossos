@@ -1042,7 +1042,20 @@ void Viewport3D::renderVolumeVP() {
     }
 }
 
+#include <boost/tuple/tuple.hpp>
+#include <QDeadlineTimer>
+
 void Viewport3D::renderViewport(const RenderOptions &options) {
+    static QDeadlineTimer time{1000, Qt::PreciseTimer};
+    static std::size_t fps;
+//    qDebug() << "foo" << viewportType << time.remainingTime();
+    if (time.hasExpired()) {
+        time += 1000;
+        qDebug() << viewportType << fps;
+        fps = 0;
+    }
+    ++fps;
+
     auto& seg = Segmentation::singleton();
     if (seg.volume_render_toggle) {
         if (!options.nodePicking) {

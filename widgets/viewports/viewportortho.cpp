@@ -95,7 +95,24 @@ void ViewportOrtho::initializeGL() {
     }
 }
 
+#include <boost/range/combine.hpp>
+#include "profiler.h"
+#include <QDeadlineTimer>
+
 void ViewportOrtho::paintGL() {
+    static std::array<QDeadlineTimer, 3> time{QDeadlineTimer{1000, Qt::PreciseTimer},
+                                              QDeadlineTimer{1000, Qt::PreciseTimer},
+                                              QDeadlineTimer{1000, Qt::PreciseTimer}};
+    static std::array<std::size_t, 3> fps;
+    for (auto tup : boost::combine(time, fps)) {
+        if (tup.get<0>().hasExpired()) {
+            tup.get<0>() += 1000;
+            qDebug() << viewportType << tup.get<1>();
+            tup.get<1>() = 0;
+        }
+    }
+    ++fps[viewportType];
+
     glClear(GL_DEPTH_BUFFER_BIT);
     glEnable(GL_BLEND);
     glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
@@ -103,6 +120,9 @@ void ViewportOrtho::paintGL() {
         renderViewportFast();
     } else {
         renderViewport();
+//        profiler[viewportType].end();
+//        qDebug() << profiler[0].average_time() + profiler[1].average_time() + profiler[2].average_time() << profiler[0].average_time() << profiler[1].average_time() << profiler[2].average_time();
+//        qDebug() << 1.0/(profiler[0].average_time() + profiler[1].average_time() + profiler[2].average_time()) << 1.0/profiler[0].average_time() << 1.0/profiler[1].average_time() << 1.0/profiler[2].average_time();
     }
     renderViewportFrontFace();
 }
