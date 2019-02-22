@@ -28,7 +28,6 @@
 #include <QIODevice>
 
 void parseSWC(QIODevice && file);
-void writeSWC(QIODevice && file, const treeListElement & tree, const bool pixelSpace);
-
+void writeSWC(QIODevice & file, const treeListElement & tree, const bool pixelSpace);
 
 #endif//SWC_H

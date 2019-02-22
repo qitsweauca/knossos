@@ -103,7 +103,7 @@ struct nodeList : karma::grammar<OutputIterator, value_type()> {
 
 #include "skeleton_dfs.h"
 
-void writeSWC(QIODevice && file, const treeListElement & tree, const bool pixelSpace) {
+void writeSWC(QIODevice & file, const treeListElement & tree, const bool pixelSpace) {
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
         throw std::runtime_error("*.swc open failed");
     }

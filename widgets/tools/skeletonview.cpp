@@ -1005,6 +1005,7 @@ void SkeletonView::exportSWC(const bool pixelSpace) {
     const auto suggestedPath = QStandardPaths::writableLocation(QStandardPaths::HomeLocation) + "/" + QString::number(tree->treeID) + ".swc";
     const auto saveName = QFileDialog::getSaveFileName(this, "Export to µm SWC file", suggestedPath, "SWC file (*.swc)");
     if (!saveName.isNull()) {
-        writeSWC(QFile{saveName}, *tree, pixelSpace);
+        QFile file{saveName};
+        writeSWC(file, *tree, pixelSpace);
     }
 }
