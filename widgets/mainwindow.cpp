@@ -218,9 +218,16 @@ MainWindow::MainWindow(QWidget * parent) : QMainWindow{parent}, evilHack{[this](
         for (int z = cpos.z; z < cpos.z + state->M; ++z)
         for (int y = cpos.y; y < cpos.y + state->M; ++y)
         for (int x = cpos.x; x < cpos.x + state->M; ++x) {
-            Loader::Controller::singleton().markOcCubeAsModified({x, y, z}, Dataset::current().magnification);
-        }
+            const auto min = Dataset::datasets[Segmentation::singleton().layerId].cube2global({x, y, z});
+            const auto max = Dataset::datasets[Segmentation::singleton().layerId].cube2global({x+1, y+1, z+1}) + 1;
 
+            const auto areamin = Annotation::singleton().movementAreaMin;
+            const auto areamax = Annotation::singleton().movementAreaMax;
+            //if (!Annotation::singleton().outsideMovementArea(min) && !Annotation::singleton().outsideMovementArea(,ax)
+            if ((max.x > areamin.x && max.y > areamin.y && max.z > areamin.z) || (min.x > areamax.x && min.y > areamax.y && min.z > areamax.z)) {
+                Loader::Controller::singleton().markOcCubeAsModified({x, y, z}, Dataset::current().magnification);
+            }
+        }
     });
 
     addDockWidget(Qt::RightDockWidgetArea, &cheatsheet);
