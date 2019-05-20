@@ -429,14 +429,18 @@ void ViewportOrtho::handleMouseReleaseMiddle(const QMouseEvent *event) {
             brush_copy.shape = brush_t::shape_t::angular;
             brush_copy.radius = displayedIsoPx;//set brush to fill visible area
 
-            const auto displayedMag1Px = displayedIsoPx / Dataset::current().scales[0].x;
-            auto areaMin = state->viewerState->currentPosition - displayedMag1Px;
-            auto areaMax = state->viewerState->currentPosition + displayedMag1Px;
+            qDebug() << Dataset::current().scales[0].x;
+            qDebug() << Dataset::current().scales[0].componentMul(v1).length();
+            qDebug() << Dataset::current().scales[0].componentMul(v2).length();
+            auto areaMin = state->viewerState->currentPosition - floatCoordinate(displayedIsoPx,displayedIsoPx,displayedIsoPx) / Dataset::current().scales[0].componentMul(v1);
+            auto areaMax = state->viewerState->currentPosition + floatCoordinate(displayedIsoPx,displayedIsoPx,displayedIsoPx) / Dataset::current().scales[0].componentMul(v2);
 
             areaMin = areaMin.capped(Annotation::singleton().movementAreaMin, Annotation::singleton().movementAreaMax);
             areaMax = areaMax.capped(Annotation::singleton().movementAreaMin, Annotation::singleton().movementAreaMax);
 
-            subobjectBucketFill(clickedCoordinate, soid, brush_copy, areaMin, areaMax);
+            qDebug() << areaMin << areaMax;
+
+            verticalSplittingPlane(clickedCoordinate);
         }
     }
     //finish node drag
