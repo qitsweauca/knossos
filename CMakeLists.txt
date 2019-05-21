@@ -168,7 +168,7 @@ endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     message(STATUS "using gold linker")
-    set(LINUXLINKER -fuse-ld=gold)
+    set(LINUXLINKER "-fuse-ld=lld")
 endif()
 
 target_link_libraries(${PROJECT_NAME}
