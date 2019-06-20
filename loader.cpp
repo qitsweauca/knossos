@@ -79,7 +79,8 @@ Loader::Controller::Controller() {
     QObject::connect(this, &Loader::Controller::loadSignal, worker.get(), &Loader::Worker::downloadAndLoadCubes);
     QObject::connect(this, &Loader::Controller::unloadCurrentMagnificationSignal, worker.get(), static_cast<void(Loader::Worker::*)()>(&Loader::Worker::unloadCurrentMagnification), Qt::BlockingQueuedConnection);
     QObject::connect(this, &Loader::Controller::markOcCubeAsModifiedSignal, worker.get(), &Loader::Worker::markOcCubeAsModified, Qt::BlockingQueuedConnection);
-    QObject::connect(this, &Loader::Controller::snappyCacheSupplySnappySignal, worker.get(), &Loader::Worker::snappyCacheMergeSnappy, Qt::BlockingQueuedConnection);
+//    QObject::connect(this, &Loader::Controller::snappyCacheSupplySnappySignal, worker.get(), &Loader::Worker::snappyCacheMergeSnappy, Qt::BlockingQueuedConnection);
+    QObject::connect(this, &Loader::Controller::snappyCacheSupplySnappySignal, worker.get(), &Loader::Worker::snappyCacheSupplySnappy, Qt::BlockingQueuedConnection);
     workerThread.start();
 }
 
