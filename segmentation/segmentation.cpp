@@ -285,7 +285,7 @@ uint64_t Segmentation::subobjectIdOfFirstSelectedObject(const Coordinate & newLo
 Segmentation::SubObject & Segmentation::subobjectFromId(const uint64_t & subobjectId, const Coordinate & location) {
     auto it = subobjects.find(subobjectId);//check if subobject exists
     if (it == std::end(subobjects)) {
-        createObjectFromSubobjectId(subobjectId, location);//create an object for the selected subobject
+        createObjectFromSubobjectId(subobjectId, location, subobjectId);//create an object for the selected subobject
         it = subobjects.find(subobjectId);
     }
     return it->second;
