@@ -2051,8 +2051,16 @@ void Skeletonizer::saveMesh(QIODevice & file, const treeListElement & tree, QVec
 void Skeletonizer::addMeshToTree(boost::optional<decltype(treeListElement::treeID)> treeID, QVector<float> & verts, QVector<float> & normals, QVector<unsigned int> & indices, QVector<std::uint8_t> & colors, int draw_mode, bool swap_xy) {
     std::vector<int> vertex_face_count(verts.size() / 3);
     try {
-        for(const auto indice : indices) {
-            ++vertex_face_count.at(indice); // use at() to be able to throw out_of_range exception
+        for (auto & indice : indices) {
+            ++vertex_face_count.at(indice);// use at() to be able to throw out_of_range exception
+            if (vertex_face_count[indice] == 1) {// face normals
+                --vertex_face_count[indice];
+                verts.push_back(verts[indice*3]);
+                verts.push_back(verts[indice*3+1]);
+                verts.push_back(verts[indice*3+2]);
+                indice = (verts.size() - 3) / 3;
+                vertex_face_count.emplace_back(1);
+            }
         }
     } catch (const std::out_of_range & ex) {
         throw std::runtime_error(tr("Ply file contains triangle index greater than number of vertices: %1").arg(ex.what()).toStdString());
