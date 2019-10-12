@@ -45,5 +45,5 @@ void main() {
          )
          , frag_color.a);
     }
-    // gl_FragColor = //vec4((frag_normal+1.0)/2.0, 1.0); // display normals
+//    gl_FragColor = vec4((frag_normal+1.0)/2.0, 1.0); // display normals
 }

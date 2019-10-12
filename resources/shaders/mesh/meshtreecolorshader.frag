@@ -1,4 +1,4 @@
-#version 110
+#version 130
 
 uniform mat4 modelview_matrix;
 uniform mat4 projection_matrix;
@@ -6,6 +6,7 @@ uniform vec4 tree_color;
 uniform vec3 vp_normal;
 
 varying vec4 frag_color;
+//flat in vec3 frag_normal;
 varying vec3 frag_normal;
 varying mat4 mvp_matrix;
 
@@ -29,12 +30,12 @@ void main() {
 //            }
     if (length(vp_normal) > 0.0) {
         float dot_value = dot(frag_normal, vp_normal);
-        if (dot_value < 0.0) {// vp_normal faces towards the camera
+        if (dot_value < -0.0) {// vp_normal faces towards the camera
             gl_FragColor = tree_color;// show
-//                    gl_FragColor = vec4(0, dot_value, 0, 1);
+//            gl_FragColor = vec4(0, 1+dot_value, 0, 1);
         } else {
             gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0);// cut
-//                    gl_FragColor = vec4(1 + dot_value, 0, 0, 1);
+//            gl_FragColor = vec4(1-dot_value, 0, 0, 1);
         }
     } else {
          gl_FragColor = vec4((0.25 * fcolor             // ambient
@@ -43,4 +44,5 @@ void main() {
          )
          , tree_color.a);
     }
+//    gl_FragColor = vec4((frag_normal+1.0)/2.0, 1.0); // display normals
 }
