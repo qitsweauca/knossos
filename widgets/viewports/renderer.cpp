@@ -764,6 +764,7 @@ void ViewportOrtho::renderViewport(const RenderOptions &options) {
         const auto & layerSettings = state->viewerState->layerRenderSettings[ordered_i];
         if (!options.nodePicking && layerSettings.visible && !Dataset::datasets[ordered_i].isOverlay()) {
             glColor4f(layerSettings.color.redF(), layerSettings.color.greenF(), layerSettings.color.blueF(), layerSettings.opacity);
+            glColor4f(i == 0, i == 1, i == 2, 1);
             slice(texture, ordered_i);// offset to the far clipping plane to avoid clipping the skeleton
             break;
         }
@@ -789,6 +790,7 @@ void ViewportOrtho::renderViewport(const RenderOptions &options) {
         const auto & layerSettings = state->viewerState->layerRenderSettings[ordered_i];
         if (!options.nodePicking && layerSettings.visible && (options.drawOverlay || !Dataset::datasets[ordered_i].isOverlay())) {
             if (!Dataset::datasets[ordered_i].isOverlay()) {
+                glColor4f(i == 0, i == 1, i == 2, 1);
                 if (first) {// first raw layer rendered is semi transparent, letting the skeleton show through (blending) in one direction
                     glColor4f(layerSettings.color.redF(), layerSettings.color.greenF(), layerSettings.color.blueF(), 0.6 * layerSettings.opacity);
                     first = false;
