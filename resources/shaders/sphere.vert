@@ -1,6 +1,7 @@
 #version 120
 
 attribute vec3 vertex;
+attribute vec4 color;
 attribute float radius;
 
 uniform vec4 viewport;
@@ -9,8 +10,9 @@ uniform mat4 modelview_matrix;
 uniform mat4 projection_matrix;
 uniform float zoom;
 
-varying float frag_radius;
 varying vec2  center;
+varying float frag_radius;
+varying vec4 frag_color;
 
 void main() {
     mat4 mvp_matrix = projection_matrix * modelview_matrix;
@@ -18,8 +20,9 @@ void main() {
 
     gl_PointSize = 2 * zoom * radius;// * min(viewport.z, viewport.w);
 
-    frag_radius = zoom * radius;
     center = gl_Position.xy;
+    frag_radius = radius;
+    frag_color = color;
 }
 
 //#version 120

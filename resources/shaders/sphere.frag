@@ -2,11 +2,12 @@
 
 uniform vec4 viewport;
 
-varying float frag_radius;
 varying vec2  center;
+varying float frag_radius;
+varying vec4 frag_color;
 
 void main() {
-    gl_FragColor = vec4(1, 0, 0, 1);
+    gl_FragColor = frag_color;
 
     vec2 ndc_cp = ((2.0 * gl_FragCoord.xy) - (2.0 * viewport.xy)) / (viewport.zw) - 1;
 
@@ -21,7 +22,7 @@ void main() {
         float dr = sqrt(r2 - d2);
         vec3 n = vec3(ndc_cp - center, dr);
         float intensity = 0.2 + max(dot(l, normalize(n)), 0.0);
-        gl_FragColor = vec4(1, 0, 0, 1) * intensity;
+        gl_FragColor.rgb *= intensity;
         gl_FragDepth = gl_FragCoord.z + dr*gl_DepthRange.diff / 2.0 * gl_ProjectionMatrix[2].z;
 //    }
 }
