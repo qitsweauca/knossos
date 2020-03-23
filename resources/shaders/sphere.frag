@@ -22,7 +22,7 @@ void main() {
         float dr = sqrt(r2 - d2);
         vec3 n = vec3(ndc_cp - center, dr);
         float intensity = 0.2 + max(dot(l, normalize(n)), 0.0);
-        gl_FragColor.rgb *= intensity;
+        gl_FragColor = frag_color * intensity;
         gl_FragDepth = gl_FragCoord.z + dr*gl_DepthRange.diff / 2.0 * gl_ProjectionMatrix[2].z;
 //    }
 }
