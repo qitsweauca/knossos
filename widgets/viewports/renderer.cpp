@@ -1897,6 +1897,7 @@ void generateSkeletonGeometry(GLBuffers & glBuffers, const RenderOptions &option
     glBuffers.colorPickingBuffer24.clear();
     glBuffers.colorPickingBuffer48.clear();
     glBuffers.colorPickingBuffer64.clear();
+    std::vector<float> radii;
 
     auto arrayFromQColor = [](QColor color){
         return decltype(glBuffers.lineVertBuffer.colors)::value_type{{static_cast<std::uint8_t>(color.red()), static_cast<std::uint8_t>(color.green()), static_cast<std::uint8_t>(color.blue()), static_cast<std::uint8_t>(color.alpha())}};
@@ -1910,7 +1911,7 @@ void generateSkeletonGeometry(GLBuffers & glBuffers, const RenderOptions &option
         glBuffers.lineVertBuffer.emplace_back(isoTop, arrayFromQColor(color));
     };
 
-    auto addNode = [arrayFromQColor, options, &glBuffers](const nodeListElement & node) {
+    auto addNode = [arrayFromQColor, options, &glBuffers, &radii](const nodeListElement & node) {
         auto color = state->viewer->getNodeColor(node);
 
         if (node.selected && options.highlightSelection) {// highlight selected nodes
@@ -1927,6 +1928,7 @@ void generateSkeletonGeometry(GLBuffers & glBuffers, const RenderOptions &option
         glBuffers.colorPickingBuffer64.emplace_back(arrayFromQColor(getPickingColor(node, RenderOptions::SelectionPass::NodeID48_64Bits)));
         glBuffers.pointVertBuffer.emplace_back(isoPos, arrayFromQColor(color));
         glBuffers.pointVertBuffer.colorBufferOffset[node.nodeID] = static_cast<unsigned int>(glBuffers.pointVertBuffer.vertices.size()-1);
+        radii.emplace_back(Skeletonizer::singleton().radius(node));
     };
 
     for (auto & currentTree : Skeletonizer::singleton().skeletonState.trees) {
@@ -1970,6 +1972,7 @@ void generateSkeletonGeometry(GLBuffers & glBuffers, const RenderOptions &option
     };
     uploadVertexData(glBuffers.pointVertBuffer.color_buffer, glBuffers.pointVertBuffer.colors);
     uploadVertexData(glBuffers.pointVertBuffer.vertex_buffer, glBuffers.pointVertBuffer.vertices);
+    uploadVertexData(glBuffers.radius_buffer, radii);
 
     uploadVertexData(glBuffers.lineVertBuffer.color_buffer, glBuffers.lineVertBuffer.colors);
     uploadVertexData(glBuffers.lineVertBuffer.vertex_buffer, glBuffers.lineVertBuffer.vertices);
@@ -2173,6 +2176,12 @@ void ViewportBase::renderSkeleton(const RenderOptions &options) {
     sphereShader.setAttributeBuffer(vertexLocation, GL_FLOAT, 0, 3);
     glBuffers.pointVertBuffer.vertex_buffer.release();
 
+    glBuffers.radius_buffer.bind();
+    const int radiusLocation = sphereShader.attributeLocation("radius");
+    sphereShader.enableAttributeArray(radiusLocation);
+    sphereShader.setAttributeBuffer(radiusLocation, GL_FLOAT, 0, 1);
+    glBuffers.radius_buffer.release();
+
     if(options.nodePicking) {
         if(options.selectionPass == RenderOptions::SelectionPass::NodeID0_24Bits) {
             glColorPointer(4, GL_UNSIGNED_BYTE, 0, glBuffers.colorPickingBuffer24.data());
@@ -2201,10 +2210,13 @@ void ViewportBase::renderSkeleton(const RenderOptions &options) {
     sphereShader.setUniformValue("modelview_matrix", modelview_mat);
     sphereShader.setUniformValue("projection_matrix", projection_mat);
     sphereShader.setUniformValue("viewport", tmp);
+    float zoom = Dataset::current().scales[0].x * screenPxXPerDataPx;
+    sphereShader.setUniformValue("zoom", zoom);
 
     glDrawArrays(GL_POINTS, 0, static_cast<GLsizei>(glBuffers.pointVertBuffer.vertices.size()));
 
     sphereShader.disableAttributeArray(vertexLocation);
+    sphereShader.disableAttributeArray(radiusLocation);
 
     sphereShader.release();
 

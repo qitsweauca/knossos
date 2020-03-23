@@ -2,7 +2,7 @@
 
 uniform vec4 viewport;
 
-varying float radius;
+varying float frag_radius;
 varying vec2  center;
 
 void main() {
@@ -12,18 +12,18 @@ void main() {
 
     vec2 diff = ndc_cp - center;
     float d2 = dot(diff, diff);
-    float r2 = radius * radius;
+    float r2 = frag_radius * frag_radius;
 
-    if(d2 > r2) {
-        discard;
-    } else {
+//    if(d2 > r2) {
+//        discard;
+//    } else {
         vec3 l = normalize(gl_LightSource[0].position.xyz);
         float dr = sqrt(r2 - d2);
         vec3 n = vec3(ndc_cp - center, dr);
         float intensity = 0.2 + max(dot(l, normalize(n)), 0.0);
         gl_FragColor = vec4(1, 0, 0, 1) * intensity;
         gl_FragDepth = gl_FragCoord.z + dr*gl_DepthRange.diff / 2.0 * gl_ProjectionMatrix[2].z;
-    }
+//    }
 }
 
 //#version 120

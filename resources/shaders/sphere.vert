@@ -1,24 +1,24 @@
 #version 120
 
 attribute vec3 vertex;
+attribute float radius;
 
 uniform vec4 viewport;
 
 uniform mat4 modelview_matrix;
 uniform mat4 projection_matrix;
+uniform float zoom;
 
-varying float radius;
+varying float frag_radius;
 varying vec2  center;
 
 void main() {
     mat4 mvp_matrix = projection_matrix * modelview_matrix;
     gl_Position = mvp_matrix * vec4(vertex, 1.0);
 
-    float R = 0.3;
-    radius = R;
+    gl_PointSize = 2 * zoom * radius;// * min(viewport.z, viewport.w);
 
-    gl_PointSize = R * min(viewport.z, viewport.w);
-
+    frag_radius = zoom * radius;
     center = gl_Position.xy;
 }
 
