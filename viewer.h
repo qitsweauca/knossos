@@ -114,7 +114,7 @@ struct ViewerState {
     //   is currently loaded.)
     Coordinate currentPosition;
 
-    int sampleBuffers{8};
+    int sampleBuffers{0};
     bool lightOnOff;
 
     // Draw the colored lines that highlight the orthogonal VP intersections with each other.

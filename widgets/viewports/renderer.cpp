@@ -151,7 +151,7 @@ void ViewportBase::renderSphere(const Coordinate & pos, float radius, const QCol
         gluQuadricOrientation(gluSphereObj, GLU_OUTSIDE);
 
         if(radius * screenPxXPerDataPx  > 20.) {
-            gluSphere(gluSphereObj, radius, 14, 14);
+            gluSphere(gluSphereObj, radius, 100, 100);
         }
         else if(radius * screenPxXPerDataPx  > 5.) {
             gluSphere(gluSphereObj, radius, 8, 8);
@@ -1993,7 +1993,7 @@ void ViewportBase::renderSkeleton(const RenderOptions &options) {
     if (!options.nodePicking && state->viewerState->lightOnOff) {
         // Configure light
         glEnable(GL_LIGHTING);
-        GLfloat ambientLight[] = {0.5, 0.5, 0.5, 0.8};
+        GLfloat ambientLight[] = {0.5f, 0.5f, 0.5f, 0.8f};
         GLfloat diffuseLight[] = {1., 1., 1., 1.};
         GLfloat lightPos[] = {0, Dataset::current().boundary.y * Dataset::current().scales[0].y, 0, 1.};
 

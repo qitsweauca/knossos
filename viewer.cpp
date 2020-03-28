@@ -891,7 +891,7 @@ void Viewer::run() {
     // start the timer before the rendering, else render interval and actual rendering time would accumulate
     if (timer.isActive()) {
         timer.stop();
-        timer.start(QApplication::activeWindow() != nullptr ? 10 : 1000);// only update once per second if K isn’t the active application
+        timer.start(QApplication::activeWindow() != nullptr ? 5 : 1000);// only update once per second if K isn’t the active application
     }
 
     if (viewerState.keyRepeat) {

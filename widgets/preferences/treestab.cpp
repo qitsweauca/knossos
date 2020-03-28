@@ -201,7 +201,7 @@ void TreesTab::loadSettings(const QSettings & settings) {
     lightEffectsCheck.setChecked(settings.value(LIGHT_EFFECTS, true).toBool());
     lightEffectsCheck.clicked(lightEffectsCheck.isChecked());
     msaaSpin.setValue(settings.value(MSAA_SAMPLES, 8).toInt());
-    msaaSpin.valueChanged(msaaSpin.value());
+//    msaaSpin.valueChanged(msaaSpin.value());
     highlightActiveTreeCheck.setChecked(settings.value(HIGHLIGHT_ACTIVE_TREE, true).toBool());
     highlightActiveTreeCheck.clicked(highlightActiveTreeCheck.isChecked());
     highlightIntersectionsCheck.setChecked(settings.value(HIGHLIGHT_INTERSECTIONS, false).toBool());
