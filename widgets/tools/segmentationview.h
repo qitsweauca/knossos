@@ -99,7 +99,7 @@ Q_OBJECT
     QHBoxLayout toolsLayout;
     QButtonGroup modeGroup;
     QLabel brushRadiusLabel{"Brush radius"};
-    QSpinBox brushRadiusEdit;
+    QDoubleSpinBox brushRadiusEdit;
     QPushButton twodBtn{"2D"};
     QPushButton threedBtn{"3D"};
     QCheckBox showOnlySelectedChck{"Show only selected objects"};
@@ -142,7 +142,7 @@ public:
     void updateSelection();
     void updateTouchedObjSelection();
     void updateLabels();
-    void updateBrushEditRange(const int minSize, const int maxSize);
+    void updateBrushEditRange(const double minSize, const double maxSize);
     uint64_t indexFromRow(const SegmentationObjectModel & model, const QModelIndex index) const;
     uint64_t indexFromRow(const TouchedObjectModel & model, const QModelIndex index) const;
 public slots:
