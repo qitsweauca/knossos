@@ -22,8 +22,24 @@
 
 #pragma once
 
-#include <QString>
+#include <boost/optional.hpp>
 
-inline std::pair<bool, QString> getBrainmapsToken() {
-    return {false, ""};
-}
+#include <cstdint>
+
+void updateToken(struct Dataset & layer);
+
+void parseGoogleJson(struct Dataset & info);
+void createChangeStack(const struct Dataset & dataset);
+
+bool bminvalid(const bool erase, const std::uint64_t srcSvx, const std::uint64_t dstSvx);
+void retrieveMeshes(const std::uint64_t soid, const int assert = 0);
+void bmmergesplit(const std::uint64_t src_soid, const std::uint64_t dst_soid);
+
+class QColor brainmapsMeshColor(const std::uint64_t treeID);
+
+#include "coordinate.h"
+
+void brainmapsBranchPoint(const boost::optional<class nodeListElement &> cursorPos, std::uint64_t subobjID, const Coordinate & globalCoord);
+
+void setSplit(const Coordinate & p, const std::uint64_t id);
+void splitMe();

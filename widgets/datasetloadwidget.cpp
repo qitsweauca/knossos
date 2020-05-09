@@ -282,9 +282,11 @@ bool DatasetLoadWidget::loadDataset(const boost::optional<bool> loadOverlay, QUr
     }
     const auto existingEntries = tableWidget.findItems(path.url(), Qt::MatchFlag::MatchExactly);
     if (existingEntries.size() == 0) {
+        QSignalBlocker block{tableWidget};
         insertDatasetRow(path.url(), tableWidget.rowCount() - 1);
         tableWidget.selectRow(tableWidget.rowCount() - 2);
     } else {
+        QSignalBlocker block{tableWidget};
         tableWidget.selectRow(existingEntries.front()->row());
     }
 
@@ -304,37 +306,6 @@ bool DatasetLoadWidget::loadDataset(const boost::optional<bool> loadOverlay, QUr
         keepAnnotation = question.clickedButton() == keepButton;
     }
     auto data = download.second;
-
-    QString token;
-    if (Dataset::isGoogleBrainmaps(path)) {
-        const auto pair = getBrainmapsToken();
-        if (!pair.first) {
-            qDebug() << "getBrainmapsToken failed";
-            return false;
-        }
-        token = pair.second;
-
-        auto googleRequest = [&token](auto path){
-            QNetworkRequest request(path);
-            request.setRawHeader("Authorization", (QString("Bearer ") + token).toUtf8());
-            return request;
-        };
-
-        auto * reply = Network::singleton().manager.get(googleRequest(QUrl("https://brainmaps.googleapis.com/v1/volumes")));
-        const auto datasets = blockDownloadExtractData(*reply);
-        qDebug() << datasets.second;
-
-        reply = Network::singleton().manager.get(googleRequest(path));
-        const auto config = blockDownloadExtractData(*reply);
-
-        if (config.first) {
-            data = config.second;
-        } else {
-            qDebug() << "download failed";
-            return false;
-        }
-    }
-
     auto layers = [&path, &data, &silent]() {
         try {
             return Dataset::parse(path, data);
@@ -379,15 +350,10 @@ bool DatasetLoadWidget::loadDataset(const boost::optional<bool> loadOverlay, QUr
             qDebug() << "no mags";
             return false;
         }
-    } else if (Dataset::isGoogleBrainmaps(path)) {
-        for (auto & layer : layers) {
-            layer.token = token;
-        }
     }
 
-    qDebug() << "loading dataset" << datasetUrl;
-
     datasetUrl = {path};//remember config url
+    qDebug() << "loading dataset" << datasetUrl;
     Loader::Controller::singleton().suspendLoader();//we change variables the loader uses
     const bool changedBoundaryOrScale = layers.front().boundary != Dataset::current().boundary || layers.front().scale != Dataset::current().scale;
 
@@ -407,9 +373,10 @@ bool DatasetLoadWidget::loadDataset(const boost::optional<bool> loadOverlay, QUr
     for (std::size_t i = 0; i < layers.size(); ++i) {// determine segmentation layer
         if (layers[i].isOverlay()) {
             overlayPresent = true;
-            layers[i].allocationEnabled = layers[i].loadingEnabled = Segmentation::singleton().enabled;
+            layers[i].allocationEnabled = layers[i].loadingEnabled = true;
             Segmentation::singleton().layerId = i;
-            break;// only enable the first overlay layer by default
+            Segmentation::singleton().enabled = true;
+            break;
         }
     }
     if (!overlayPresent) {// add empty overlay channel
@@ -419,11 +386,13 @@ bool DatasetLoadWidget::loadDataset(const boost::optional<bool> loadOverlay, QUr
         Segmentation::singleton().layerId = i;
         layers.back().type = Dataset::CubeType::SNAPPY;
     }
+    if (overlayPresent && layers[Segmentation::singleton().layerId].api == Dataset::API::GoogleBrainmaps) {
+        createChangeStack(layers[Segmentation::singleton().layerId]);
+    }
     Dataset::datasets = layers;
 
     state->viewer->resizeTexEdgeLength(cubeEdgeLen, state->M, Dataset::datasets.size());// resets textures
 
-    updateDatasetInfo(path, download.second);
     applyGeometrySettings();
 
     if (changedBoundaryOrScale || !keepAnnotation) {
@@ -447,6 +416,7 @@ bool DatasetLoadWidget::loadDataset(const boost::optional<bool> loadOverlay, QUr
 
     emit datasetChanged();
 
+    updateDatasetInfo(path, download.second);
     return true;
 }
 

@@ -30,7 +30,7 @@ time cp -R /usr/local/Cellar/quazip/${QUAZIP_VERSION}/include/quazip/* quazip/qu
 
 # Build KNOSSOS
 mkdir knossos-build && cd knossos-build
-time cmake -G Ninja ../knossos -DCMAKE_PREFIX_PATH=/usr/local/opt/qt -DCMAKE_CXX_FLAGS=-isystem\ ${TRAVIS_BUILD_DIR}/../quazip
+time cmake -G Ninja ../knossos -DCMAKE_PREFIX_PATH=/usr/local/opt/qt -DOPENSSL_ROOT_DIR=/usr/local/opt/openssl -DCMAKE_CXX_FLAGS=-isystem\ ${TRAVIS_BUILD_DIR}/../quazip
 time ninja
 
 # OS X housekeeping

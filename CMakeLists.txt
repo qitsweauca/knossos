@@ -157,6 +157,15 @@ set_target_properties(${PROJECT_NAME}
     PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/resources/Info.plist)
 add_dependencies(${PROJECT_NAME} buildinfo)#main target needs buildinfo
 
+include(FetchContent)
+FetchContent_Declare(jwt-cpp GIT_REPOSITORY https://github.com/Thalhammer/jwt-cpp.git)
+FetchContent_Populate(jwt-cpp)
+
+find_package(OpenSSL REQUIRED COMPONENTS Crypto)
+add_library(jwt-cpp::jwt-cpp INTERFACE IMPORTED)
+target_include_directories(jwt-cpp::jwt-cpp INTERFACE "${jwt-cpp_SOURCE_DIR}/include")
+target_link_libraries(jwt-cpp::jwt-cpp INTERFACE OpenSSL::Crypto)
+
 option(PythonQt_QtAll "Include the PythonQt QtAll extension which wraps all Qt libraries" ON)
 if(PythonQt_QtAll)
     find_package(${pythonqt}_QtAll REQUIRED)
@@ -170,7 +179,6 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     message(STATUS "using gold linker")
     set(LINUXLINKER -fuse-ld=gold)
 endif()
-
 target_link_libraries(${PROJECT_NAME}
     Boost::boost
     OpenGL::GLU
@@ -182,6 +190,7 @@ target_link_libraries(${PROJECT_NAME}
     ${pythonqt}
     QuaZip::QuaZip
     Snappy::Snappy
+    jwt-cpp::jwt-cpp
     ${LINUXLINKER}
     $<$<AND:$<PLATFORM_ID:Windows>,$<NOT:$<CONFIG:Debug>>>:-Wl,--dynamicbase># use ASLR, required by the »Windows security features test« for »Windows Desktop App Certification«
 )
@@ -204,8 +213,11 @@ endif(APPLE)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES BUILD_WITH_INSTALL_RPATH TRUE)
 
+#list(APPEND CMAKE_CXX_FLAGS "-fsanitize=address")
+
 target_compile_options(${PROJECT_NAME} PRIVATE "-pedantic-errors")
 target_compile_options(${PROJECT_NAME} PRIVATE "-Wall" "-Wextra")
+#target_compile_options(${PROJECT_NAME} PRIVATE "-gdwarf-aranges")
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     target_compile_options(${PROJECT_NAME} PRIVATE "-fcolor-diagnostics")
@@ -215,11 +227,11 @@ endif()
 
 string(TOUPPER ${CMAKE_BUILD_TYPE} CMAKE_BUILD_TYPE_UPPER_CASE)
 if(CMAKE_BUILD_TYPE_UPPER_CASE MATCHES "DEBUG")
-    target_compile_definitions(${PROJECT_NAME} PRIVATE "_GLIBCXX_DEBUG")
-    target_compile_definitions(${PROJECT_NAME} PRIVATE "_GLIBCXX_DEBUG_PEDANTIC")
+#    target_compile_definitions(${PROJECT_NAME} PRIVATE "_GLIBCXX_DEBUG")
+#    target_compile_definitions(${PROJECT_NAME} PRIVATE "_GLIBCXX_DEBUG_PEDANTIC")
 endif()
 
 include(cotire OPTIONAL)#https://github.com/sakra/cotire/releases/latest
 if(COMMAND cotire)
-    cotire(${PROJECT_NAME})
+#    cotire(${PROJECT_NAME})
 endif()

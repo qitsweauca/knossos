@@ -87,20 +87,22 @@ Viewer::Viewer() : evilHack{[this](){ state->viewer = this; return true; }()} {
             auto & svp = glBuffers.pointVertBuffer;
 
             //restore old node color
-            size_t offset = svp.colorBufferOffset[svp.lastSelectedNode];
-            QColor color = getNodeColor(*state->skeletonState->nodesByNodeID[svp.lastSelectedNode]);
+            if (state->skeletonState->nodesByNodeID.find(svp.lastSelectedNode) != std::end(state->skeletonState->nodesByNodeID)) {
+                size_t offset = svp.colorBufferOffset[svp.lastSelectedNode];
+                QColor color = getNodeColor(*state->skeletonState->nodesByNodeID[svp.lastSelectedNode]);
 
-            svp.colors[offset] = decltype(glBuffers.lineVertBuffer.colors)::value_type{{static_cast<std::uint8_t>(color.red()), static_cast<std::uint8_t>(color.green()), static_cast<std::uint8_t>(color.blue()), static_cast<std::uint8_t>(color.alpha())}};
+                svp.colors[offset] = decltype(glBuffers.lineVertBuffer.colors)::value_type{{static_cast<std::uint8_t>(color.red()), static_cast<std::uint8_t>(color.green()), static_cast<std::uint8_t>(color.blue()), static_cast<std::uint8_t>(color.alpha())}};
 
-            svp.color_buffer.bind();
-            svp.color_buffer.write(static_cast<int>(offset * sizeof(svp.colors[offset])), &svp.colors[offset], sizeof(svp.colors[offset]));
-            svp.color_buffer.release();
+                svp.color_buffer.bind();
+                svp.color_buffer.write(static_cast<int>(offset * sizeof(svp.colors[offset])), &svp.colors[offset], sizeof(svp.colors[offset]));
+                svp.color_buffer.release();
+            }
 
             //colorize new active node
             svp.lastSelectedNode = state->skeletonState->selectedNodes.front()->nodeID;
-            offset = svp.colorBufferOffset[svp.lastSelectedNode];
+            const auto offset = svp.colorBufferOffset[svp.lastSelectedNode];
 
-            color = Qt::green;
+            const auto color = QColor{Qt::green};
             decltype(glBuffers.lineVertBuffer.colors)::value_type activeNodeColor{{static_cast<std::uint8_t>(color.red()), static_cast<std::uint8_t>(color.green()), static_cast<std::uint8_t>(color.blue()), static_cast<std::uint8_t>(color.alpha())}};
 
             svp.color_buffer.bind();
@@ -361,6 +363,8 @@ void Viewer::dcSliceExtract(std::uint8_t * datacube, floatCoordinate *currentPxI
     }
 }
 
+#include "brainmaps.h"
+
 /**
  * @brief Viewer::ocSliceExtract extracts subObject IDs from datacube
  *      and paints slice at the corresponding position with a color depending on the ID.
@@ -402,9 +406,9 @@ void Viewer::ocSliceExtract(std::uint64_t * datacube, Coordinate cubePosInAbsPx,
     for (int yzz = 0; yzz < cubeEdgeLen; ++yzz) {
         for (int xxy = 0; xxy < cubeEdgeLen; ++xxy) {
             bool hide = false;
+            const auto offsetx = Dataset::current().scaleFactor.componentMul(Coordinate(vp.viewportType == VIEWPORT_XY || vp.viewportType == VIEWPORT_XZ, vp.viewportType == VIEWPORT_ZY, 0) * xxy);
+            const auto offsety = Dataset::current().scaleFactor.componentMul(Coordinate(0, vp.viewportType == VIEWPORT_XY, vp.viewportType == VIEWPORT_XZ || vp.viewportType == VIEWPORT_ZY) * yzz);
             if (partlyOutsideMovementArea) {
-                const auto offsetx = Dataset::current().scaleFactor.componentMul(Coordinate(vp.viewportType == VIEWPORT_XY || vp.viewportType == VIEWPORT_XZ, vp.viewportType == VIEWPORT_ZY, 0) * xxy);
-                const auto offsety = Dataset::current().scaleFactor.componentMul(Coordinate(0, vp.viewportType == VIEWPORT_XY, vp.viewportType == VIEWPORT_XZ || vp.viewportType == VIEWPORT_ZY) * yzz);
                 if (Annotation::singleton().outsideMovementArea(cubePosInAbsPx + offsetx + offsety)) {
                     slice[3] = 0;
                     hide = true;
@@ -413,21 +417,22 @@ void Viewer::ocSliceExtract(std::uint64_t * datacube, Coordinate cubePosInAbsPx,
 
             if(hide == false) {
                 const uint64_t subobjectId = datacube[0];
+                const bool selected = layerId == seg.layerId && ((subobjectIdCache == subobjectId) ? selectedCache : seg.isSubObjectIdSelected(subobjectId));
 
-                const auto color = (subobjectIdCache == subobjectId) ? colorCache : seg.colorObjectFromSubobjectId(subobjectId);
+                const bool bm = Annotation::singleton().annotationMode.testFlag(AnnotationMode::Mode_Brainmaps);
+                const auto color = (subobjectIdCache == subobjectId) ? colorCache : bm ? seg.brainmapsColor(subobjectId, selected) :  seg.colorObjectFromSubobjectId(subobjectId);
                 slice[0] = std::get<0>(color);
                 slice[1] = std::get<1>(color);
                 slice[2] = std::get<2>(color);
                 slice[3] = std::get<3>(color);
 
-                const bool selected = layerId == seg.layerId && ((subobjectIdCache == subobjectId) ? selectedCache : seg.isSubObjectIdSelected(subobjectId));
                 const bool isPastFirstRow = counter >= min;
                 const bool isBeforeLastRow = counter < max;
                 const bool isNotFirstColumn = counter % cubeEdgeLen != 0;
                 const bool isNotLastColumn = (counter + 1) % cubeEdgeLen != 0;
 
                 // highlight edges where needed
-                if(seg.highlightBorder) {
+                if(seg.highlightBorder && !bm) {
                     if(seg.hoverVersion) {
                         uint64_t objectId = seg.tryLargestObjectContainingSubobject(subobjectId);
                         if (selected && seg.mouseFocusedObjectId == objectId) {

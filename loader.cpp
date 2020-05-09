@@ -74,8 +74,9 @@ Loader::Controller::Controller() {
     worker = std::make_unique<Loader::Worker>();
     workerThread.setObjectName("Loader");
     worker->moveToThread(&workerThread);
-    QObject::connect(worker.get(), &Loader::Worker::progress, this, [this](bool, int count){emit progress(count);});
+    QObject::connect(worker.get(), &Loader::Worker::progress, this, [this](bool, int count, int failed){emit progress(count, failed);});
     QObject::connect(worker.get(), &Loader::Worker::progress, this, &Loader::Controller::refCountChange);
+    QObject::connect(worker.get(), &Loader::Worker::retoken, this, &Loader::Controller::retoken, Qt::BlockingQueuedConnection);
     QObject::connect(this, &Loader::Controller::loadSignal, worker.get(), &Loader::Worker::downloadAndLoadCubes);
     QObject::connect(this, &Loader::Controller::unloadCurrentMagnificationSignal, worker.get(), static_cast<void(Loader::Worker::*)()>(&Loader::Worker::unloadCurrentMagnification), Qt::BlockingQueuedConnection);
     QObject::connect(this, &Loader::Controller::markOcCubeAsModifiedSignal, worker.get(), &Loader::Worker::markOcCubeAsModified, Qt::BlockingQueuedConnection);
@@ -442,22 +443,24 @@ std::pair<bool, void*> decompressCube(void * currentSlot, QIODevice & reply, con
             std::copy(std::begin(data), std::end(data), reinterpret_cast<std::uint64_t *>(currentSlot));
             success = true;
         }
-    } else if (dataset.type == Dataset::CubeType::SEGMENTATION_SZ_ZIP) {
-        QBuffer buffer(&data);
-        QuaZip archive(&buffer);//QuaZip needs a random access QIODevice
-        if (archive.open(QuaZip::mdUnzip)) {
-            archive.goToFirstFile();
-            QuaZipFile file(&archive);
-            if (file.open(QIODevice::ReadOnly)) {
-                auto data = file.readAll();
-                std::size_t uncompressedSize;
-                snappy::GetUncompressedLength(data.data(), data.size(), &uncompressedSize);
-                const std::size_t expectedSize = state->cubeBytes * OBJID_BYTES;
-                if (uncompressedSize == expectedSize) {
-                    success = snappy::RawUncompress(data.data(), data.size(), reinterpret_cast<char*>(currentSlot));
+    } else if (dataset.type == Dataset::CubeType::SEGMENTATION_SZ_ZIP || dataset.type == Dataset::CubeType::SEGMENTATION_SZ) {
+        if (dataset.type == Dataset::CubeType::SEGMENTATION_SZ_ZIP) {
+            QBuffer buffer(&data);
+            QuaZip archive(&buffer);//QuaZip needs a random access QIODevice
+            if (archive.open(QuaZip::mdUnzip)) {
+                archive.goToFirstFile();
+                QuaZipFile file(&archive);
+                if (file.open(QIODevice::ReadOnly)) {
+                    data = file.readAll();
                 }
+                archive.close();
             }
-            archive.close();
+        }
+        std::size_t uncompressedSize;
+        snappy::GetUncompressedLength(data.data(), data.size(), &uncompressedSize);
+        const std::size_t expectedSize = state->cubeBytes * OBJID_BYTES;
+        if (uncompressedSize == expectedSize) {
+            success = snappy::RawUncompress(data.data(), data.size(), reinterpret_cast<char*>(currentSlot));
         }
     } else {
         qDebug() << "unsupported format";
@@ -493,6 +496,11 @@ void Loader::Worker::cleanup(const Coordinate center) {
     }
 }
 
+void Loader::Controller::retoken(const std::size_t layerId, const Coordinate & center, const UserMoveType userMoveType, const floatCoordinate & direction) {
+    updateToken(Dataset::datasets[layerId]);
+    startLoading(center, userMoveType, direction);
+}
+
 void Loader::Controller::startLoading(const Coordinate & center, const UserMoveType userMoveType, const floatCoordinate & direction) {
     worker->isFinished = false;
     workerThread.start();
@@ -501,13 +509,18 @@ void Loader::Controller::startLoading(const Coordinate & center, const UserMoveT
     }
 }
 
-void Loader::Worker::broadcastProgress(bool startup) {
+void Loader::Worker::broadcastProgress(bool startup, bool failed) {
     std::size_t count{0};
+    static std::size_t failedCount{0};
+    if (startup) {
+        failedCount = 0;
+    }
+    failedCount += failed;
     for (std::size_t layerId{0}; layerId < datasets.size(); ++layerId) {
         count += slotDownload[layerId].size() + slotDecompression[layerId].size();
     }
     isFinished = count == 0;
-    emit progress(startup, count);
+    emit progress(startup, count, failedCount);
 }
 
 void Loader::Worker::downloadAndLoadCubes(const unsigned int loadingNr, const Coordinate center, const UserMoveType userMoveType, const floatCoordinate & direction, Dataset::list_t changedDatasets, const size_t segmentationLayer, const size_t cacheSize) {
@@ -580,7 +593,7 @@ void Loader::Worker::downloadAndLoadCubes(const unsigned int loadingNr, const Co
         }
     }
 
-    auto startDownload = [this, center](const std::size_t layerId, const Dataset dataset, const CoordOfCube cubeCoord, decltype(slotDownload)::value_type & downloads
+    auto startDownload = [this, center, userMoveType, direction](const std::size_t layerId, const Dataset dataset, const CoordOfCube cubeCoord, decltype(slotDownload)::value_type & downloads
             , decltype(slotDecompression)::value_type & decompressions, decltype(freeSlots)::value_type & freeSlots, decltype(state->cube2Pointer)::value_type::value_type & cubeHash){
         const auto c = dataset.cube2global(cubeCoord);
         const auto b = dataset.boundary;
@@ -660,8 +673,11 @@ void Loader::Worker::downloadAndLoadCubes(const unsigned int loadingNr, const Co
                 if (dataset.api == Dataset::API::GoogleBrainmaps) {
                     const auto inmagCoord = cubeCoord * dataset.cubeEdgeLength;
                     request.setRawHeader("Content-Type", "application/octet-stream");
-                    const QString json(R"json({"geometry":{"corner":"%1,%2,%3", "size":"%4,%4,%4", "scale":%5}, "subvolume_format":"SINGLE_IMAGE", "image_format_options":{"image_format":"JPEG", "jpeg_quality":70}})json");
-                    payload = json.arg(inmagCoord.x).arg(inmagCoord.y).arg(inmagCoord.z).arg(dataset.cubeEdgeLength).arg(loaderMagnification).toUtf8();
+//                    const auto changeSpec = dataset.type == Dataset::CubeType::SEGMENTATION_SZ ? QString(R"json(, "changeSpec": {"changeStackId": "%7", "skipEquivalences": false})json").arg(dataset.brainmapsChangeStack) : "";
+                    const auto changeSpec = "";
+                    const auto format = dataset.type == Dataset::CubeType::SEGMENTATION_SZ ? "RAW_SNAPPY" : "SINGLE_IMAGE";
+                    const QString json(R"json({"geometry":{"corner":"%1,%2,%3", "size":"%4,%4,%4", "scale":%5}, "subvolume_format":"%6", "image_format_options":{"image_format":"JPEG", "jpeg_quality":100}%7})json");
+                    payload = json.arg(inmagCoord.x).arg(inmagCoord.y).arg(inmagCoord.z).arg(dataset.cubeEdgeLength).arg(loaderMagnification).arg(format).arg(changeSpec).toUtf8();
                 } else if (dataset.api == Dataset::API::WebKnossos) {
                     const auto globalCoord = dataset.cube2global(cubeCoord);
                     request.setRawHeader("Content-Type", "application/json");
@@ -677,12 +693,12 @@ void Loader::Worker::downloadAndLoadCubes(const unsigned int loadingNr, const Co
             reply->setParent(nullptr);// reparent, so it doesn’t get destroyed with qnam
             downloads[cubeCoord] = reply;
             broadcastProgress(true);
-            QObject::connect(reply, &QNetworkReply::finished, this, [this, layerId, dataset, reply, cubeCoord, &downloads, &decompressions, &freeSlots, &cubeHash](){
+            QObject::connect(reply, &QNetworkReply::finished, this, [this, layerId, dataset, reply, cubeCoord, &downloads, &decompressions, &freeSlots, &cubeHash, center, userMoveType, direction](){
                 if (freeSlots.empty()) {
                     qCritical() << layerId << cubeCoord << static_cast<int>(dataset.type) << "no slots for decompression" << cubeHash.size() << freeSlots.size();
                     reply->deleteLater();
                     downloads.erase(cubeCoord);
-                    broadcastProgress();
+                    broadcastProgress(false, true);
                     return;
                 }
                 if (reply->error() == QNetworkReply::NoError) {
@@ -723,9 +739,9 @@ void Loader::Worker::downloadAndLoadCubes(const unsigned int loadingNr, const Co
                             if (dataset.api == Dataset::API::GoogleBrainmaps) {
                                 qDebug() << "GoogleBrainmaps error" << reply->error();
                                 if (reply->error() == QNetworkReply::ContentAccessDenied || reply->error() == QNetworkReply::AuthenticationRequiredError) {
-                                    auto pair = getBrainmapsToken();
-                                    if (pair.first) {
-                                        Dataset::datasets[layerId].token = datasets[layerId].token = pair.second;
+                                    if (!datasets[layerId].token.isEmpty()) {
+                                        datasets[layerId].token.clear();
+                                        emit retoken(layerId, center, userMoveType, direction);
                                     }
                                 }
                             }
@@ -733,12 +749,11 @@ void Loader::Worker::downloadAndLoadCubes(const unsigned int loadingNr, const Co
                     }
                     reply->deleteLater();
                     downloads.erase(cubeCoord);
-                    broadcastProgress();
+                    broadcastProgress(false, reply->error() != QNetworkReply::ContentNotFoundError);
                 }
             });
         }
     };
-
     const auto workaroundProcessLocalImmediately = [](auto dataset){
         if (dataset.url.scheme() == "file") {
             QCoreApplication::processEvents();
