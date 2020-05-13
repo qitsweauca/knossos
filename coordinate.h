@@ -222,7 +222,7 @@ public:
 };
 
 constexpr CoordOfCube Coordinate::cube(const int size, const floatCoordinate scale) const {
-    return CoordOfCube(x / size / scale.x, y / size / scale.y, z / size / scale.z);
+    return CoordOfCube(std::round(x / scale.x) / size, std::round(y / scale.y) / size, std::round(z / scale.z) / size);
 }
 constexpr CoordInCube Coordinate::insideCube(const int size, const floatCoordinate scale) const {
     return CoordInCube(static_cast<int>(x / scale.x) % size, static_cast<int>(y / scale.y) % size, static_cast<int>(z / scale.z) % size);
