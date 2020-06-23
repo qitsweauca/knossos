@@ -32,7 +32,7 @@ void main() {
 
     if (length(vp_normal) > 0.0) {
         float dot_value = dot(frag_normal, vp_normal);
-        if (dot_value < 0.0) {// vp_normal faces towards the camera
+        if (!gl_FrontFacing) {
             gl_FragColor = frag_color;// show
         } else {
             gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0);// cut
