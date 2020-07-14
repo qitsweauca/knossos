@@ -322,6 +322,7 @@ void DatasetLoadWidget::updateDatasetInfo(const QUrl & url, const QString & info
     supercubeedge = std::max(3, supercubeedge - !(supercubeedge % 2));
     fovSpin.setCubeEdge(datasetinfo.cubeEdgeLength.x);
     fovSpin.setValue((supercubeedge - 1) * datasetinfo.cubeEdgeLength.x);
+    cubeEdgeSpin.setRange(1, std::max(cubeEdgeSpin.value(), datasetinfo.cubeEdgeLength.x));
     cubeEdgeSpin.setValue(datasetinfo.cubeEdgeLength.x);
     adaptMemoryConsumption(datasetinfo.cubeEdgeLength);
 
