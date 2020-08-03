@@ -61,7 +61,7 @@ QVariant DatasetModel::data(const QModelIndex & index, int role) const {
 bool DatasetModel::setData(const QModelIndex & index, const QVariant & value, int role) {
     if (index.isValid()) {
         datasets[index.row()] = value.toString();
-        if (index.row() == rowCount() - 1) {
+        if (index.row() == rowCount() - 1 && !index.data().toString().isEmpty()) {
             beginInsertRows({}, datasets.size(), datasets.size());
             datasets.push_back("");
             endInsertRows();
@@ -247,7 +247,19 @@ DatasetLoadWidget::DatasetLoadWidget(QWidget *parent) : DialogVisibilityNotify(D
     setLayout(&mainLayout);
     QObject::connect(&searchField, &QLineEdit::textChanged, [this](const QString & text) {
         tableWidget.filterString = text;
+        qDebug() << text << tableWidget.selectionModel()->selection() << sortAndFilterProxy.mapSelectionFromSource(tableWidget.selectionModel()->selection());
         sortAndFilterProxy.setFilterFixedString(text);
+        qDebug() << text << tableWidget.selectionModel()->selection() << sortAndFilterProxy.mapSelectionFromSource(tableWidget.selectionModel()->selection());
+        for (auto & index : tableWidget.selectionModel()->selectedIndexes()) {
+            qDebug() << index.isValid() << index.data().toString() << index.row() << sortAndFilterProxy.data(index).toString();
+            if (!sortAndFilterProxy.hasIndex(index.row(), index.column())) {
+                tableWidget.selectionModel()->select(index, QItemSelectionModel::Deselect);
+                for (int row = 0; row < sortAndFilterProxy.rowCount(); row++) {
+                    qDebug() << sortAndFilterProxy.index(row, 0).data().toString();
+                }
+                qDebug() << "Cleared";
+            }
+        }
     });
     QObject::connect(&datasetModel, &DatasetModel::dataChanged, this, &DatasetLoadWidget::datasetCellChanged);
     QObject::connect(tableWidget.selectionModel(), &QItemSelectionModel::selectionChanged, [this]() {
